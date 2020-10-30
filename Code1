@@ -1,1 +1,230 @@
+/*Below code was created for a homework in MQM's Data Infrastructure class*/
+/*Some of the skills used are substring manipulation, data type conversion and joins*/
+
+
+SELECT * FROM ontime LIMIT 100;
+
+SELECT 	* 
+FROM	airports
+LIMIT 	100;
+
+SELECT 	COUNT(*) AS "OntimeCount"
+FROM	ontime;
+
+SELECT 	COUNT(*) AS "JoinedCount"
+FROM	ontime
+INNER JOIN	airports
+ON			ontime.Origin=airports.IATA;
+
+SELECT 	Country,
+		City,
+		COUNT(*) AS "Total_Rec"
+FROM	airports
+INNER JOIN 	ontime
+ON			airports.IATA = ontime.Origin
+WHERE		ontime.Cancelled = 0 AND 
+			ontime.Diverted = 0 AND
+            airports.Country != "United States"
+GROUP BY	Country, City
+ORDER BY "Total_Rec" DESC;
+
+SELECT 		ontime.Origin, 
+			ontime.Dest,
+            Popular.Count
+FROM 		ontime
+INNER JOIN	(
+			SELECT		FlightNum,
+						COUNT(*) AS "Count"
+			FROM		ontime
+			WHERE 		Cancelled = 0 AND
+						Diverted = 0
+			GROUP BY	FlightNum
+			ORDER BY	COUNT(*) DESC
+			LIMIT		10) AS Popular
+ON			ontime.FlightNum = Popular.FlightNum
+ORDER BY	Popular.Count DESC;
+
+SELECT 		SUBSTRING_INDEX(airports.name,"Airport",1) AS "Departure",
+            SUBSTRING_INDEX(airportsB.name,"Airport",1) AS "Arrival",
+            A.Count As "Count"
+FROM		(
+SELECT		FlightNum,
+			COUNT(*) AS "Count"
+FROM		ontime
+WHERE 		Cancelled = 0 AND
+			Diverted = 0
+GROUP BY	FlightNum) AS A
+INNER JOIN	ontime AS B
+ON			A.FlightNum = B.FlightNum
+INNER JOIN	airports
+ON			B.Origin = airports.IATA
+INNER JOIN	airports AS airportsB
+ON			B.Dest = airportsB.IATA
+WHERE		airports.Country != "United States"
+GROUP BY	A.FlightNum
+ORDER BY	A.Count DESC
+LIMIT 10;
+
+SELECT substring_index(name,'Airport',1) from airports Limit 10;
+
+
+
+
+SELECT airports.Name AS "Arrival", ontime.Origin
+FROM airports
+INNER JOIN ontime
+ON airports.IATA = ontime.Origin LIMIT 10;
+
+SELECT airports.Name AS "Arrival", ontime.Dest
+FROM airports
+INNER JOIN ontime
+ON airports.IATA = ontime.Dest LIMIT 10;
+
+SELECT * 
+FROM	ontime
+WHERE	Cancelled = 0 AND
+		Diverted = 0;
+        
+SELECT *
+FROM 	airports
+WHERE 	Country = "United States";
+
+SELECT 		COUNT(ontime.FlightNum)
+FROM		ontime
+INNER JOIN	airports AS A
+ON			ontime.Origin = A.IATA
+INNER JOIN	airports AS B
+ON			ontime.Dest = B.IATA
+WHERE		A.Country = "United States" AND
+			B.Country = "United States" AND
+			ABS(A.Altitude - B.Altitude) >=3000 AND
+            ontime.Cancelled = 0 AND
+            ontime.Diverted = 0;
+            
+            
+            
+SELECT 		((
+			SELECT 		COUNT(ontime.FlightNum)
+			FROM		ontime
+			INNER JOIN	airports AS A
+			ON			ontime.Origin = A.IATA
+			INNER JOIN	airports AS B
+			ON			ontime.Dest = B.IATA
+			WHERE		A.Country = "United States" AND
+						B.Country = "United States" AND
+						ABS(A.Altitude - B.Altitude) >=3000 AND
+						ontime.Cancelled = 0 AND
+						ontime.Diverted = 0)/
+			COUNT(ontime.FlightNum)) AS "Percentage"
+FROM		ontime
+INNER JOIN	airports AS A
+ON			ontime.Origin = A.IATA
+INNER JOIN	airports AS B
+ON			ontime.Dest = B.IATA
+WHERE		ontime.Cancelled = 0 AND
+			ontime.Diverted = 0 AND
+			A.Country = "United States" AND
+            B.Country = "United States";
+
+SELECT count(*) from ontime;
+
+SELECT 	COUNT(FlightNum)
+FROM 	ontime
+INNER JOIN
+(SELECT 	
+		CASE
+		WHEN Timezone = "America/New_York" THEN 1
+        WHEN Timezone = "America/Chicago" THEN 2
+        WHEN Timezone = "America/Dever" OR
+			Timezone= "America/Phoenix" THEN 3
+		WHEN Timezone = "America/Los_Angeles" THEN 4
+        ELSE NULL
+        END AS TZ_Num,
+        Country,
+        IATA
+FROM 	airports) AS TMZA
+ON		ontime.Origin = TMZA.IATA
+INNER JOIN
+(SELECT 	
+		CASE
+		WHEN Timezone = "America/New_York" THEN 1
+        WHEN Timezone = "America/Chicago" THEN 2
+        WHEN Timezone = "America/Dever" OR
+			Timezone= "America/Phoenix" THEN 3
+		WHEN Timezone = "America/Los_Angeles" THEN 4
+        ELSE NULL
+        END AS TZ_Num,
+        Country,
+        IATA
+FROM 	airports) AS TMZB
+ON		ontime.Dest=TMZB.IATA
+WHERE	ontime.Cancelled = 0 AND
+		ontime.Diverted = 0 AND
+        TMZA.Country= "United States" AND
+        TMZB.Country = "United States" AND
+        ABS(TMZA.TZ_Num - TMZB.TZ_Num)>=3;
+        
+USE yelp;
+SELECT * FROM business LIMIT 50;
+
+
+SELECT 		CASE
+			WHEN (review.funny + review.useful + review.cool ) = 0 THEN "No Review"
+            WHEN (review.funny + review.useful + review.cool ) !=0 THEN "Some Review"
+            END AS ReviewGroup,
+			ROUND(COUNT(*)/(83939 + 35575) * 100,2) AS "Percentage"      
+FROM		review 
+INNER JOIN	business
+ON 			review.business_id=business.business_id	
+WHERE		DATE(review.date)>='2019-10-09' AND
+			business.is_open = 1
+GROUP BY 	ReviewGroup;
+
+
+
+SELECT 		CASE
+			WHEN (review.funny + review.useful + review.cool ) = 0 THEN "No Review"
+            WHEN (review.funny + review.useful + review.cool ) !=0 THEN "Some Review"
+            END AS ReviewGroup,
+			COUNT(*)/SUM(COUNT(*)) OVER() AS "Percentage"    
+FROM		review 
+INNER JOIN	business
+ON 			review.business_id=business.business_id	
+WHERE		DATE(review.date)>='2019-10-09' AND
+			business.is_open = 1
+GROUP BY 	ReviewGroup;
+
+SELECT 		CASE
+			WHEN (review.funny + review.useful + review.cool ) = 0 THEN "No Review"
+            WHEN (review.funny + review.useful + review.cool ) !=0 THEN "Some Review"
+            END AS ReviewGroup,
+			COUNT(*) AS "Count"        
+FROM		review 
+INNER JOIN	business
+ON 			review.business_id=business.business_id	
+WHERE		DATE(review.date)>='2019-10-09' AND
+			business.is_open = 1
+GROUP BY 	ReviewGroup;
+SELECT		COUNT(*)
+FROM		review 
+INNER JOIN	business
+ON 			review.business_id=business.business_id	
+WHERE		DATE(review.date)>='2019-10-09' AND
+			business.is_open = 1;
+            
+select * from user;
+
+SELECT 		CASE
+			WHEN user.elite IS NOT NULL THEN "Elite"
+            WHEN user.elite IS NULL THEN "Not elite"
+            END AS EliteGroup,
+			AVG(review.stars)
+FROM 		user 
+INNER JOIN	review
+ON			user.user_id=review.user_id
+WHERE		YEAR(DATE(review.date))='2018' AND
+			user.review_count>=1
+GROUP BY	EliteGroup;
+
+
 
