@@ -1,0 +1,67 @@
+/*Code for a team project. Skills used are CTEs. A part of this project was cleaning up the data and selecting distinct observations in dataset*/
+
+SELECT * FROM users;
+#Getting tables Year, Month, Count by year, County by month:
+
+
+WITH T1 AS
+(
+SELECT    sign_in_count,
+          user_guid,
+          created_at,
+          updated_at,
+          max_dogs,
+          membership_id,
+          subscribed,
+          last_active_at,
+          city,
+          state,
+          zip,
+          membership_type,
+          country
+FROM      users
+GROUP BY  user_guid,
+          created_at,
+          updated_at,
+          max_dogs,
+          membership_id,
+          subscribed,
+          last_active_at,
+          city,
+          state,
+          zip,
+          membership_id,
+          country
+), T2 AS
+(SELECT 	YEAR(created_at) AS 'Year',
+		MONTH(created_at) AS 'Month',
+        COUNT(user_guid) OVER(PARTITION BY YEAR(created_at)) AS 'Count_Year',
+        COUNT(user_guid) OVER(PARTITION BY MONTH(created_at)) AS 'Count_Month'
+FROM T1)
+SELECT T2.Year,
+		T2.Month,
+		T2.Count_Year,
+        T2.Count_Month
+FROM T2
+GROUP BY T2.Year,
+			T2.Month
+ORDER BY T2.Year,
+		T2.Month;
+
+
+
+
+
+WITH T3 AS
+(
+SELECT 	COUNT(user_guid) OVER(PARTITION BY YEAR(created_at)) AS 'Count_Year_1',
+        COUNT(user_guid) OVER(PARTITION BY MONTH(created_at)) AS 'Count_Month_1'
+FROM 	T2
+WHERE 
+)
+SELECT 	T2.Year,
+		T2.Month,
+        T2.Count_Year,
+        T2.Count_Month,
+        T3.Count_Year_1/T2.Count_Year AS 'Percentage'
+FROM T3;
