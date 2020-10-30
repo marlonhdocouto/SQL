@@ -1,0 +1,54 @@
+/*For this project we had a limited amount of class time to find information about baseball games, winners, etc*/
+/*We used all the skills we learned in class: joins, CTEs, window functions, data conversion, etc*/
+
+
+USE lahman2016;
+
+SELECT * FROM Salaries LIMIT 100;
+
+SELECT SUM(salary) FROM Salaries
+WHERE yearID>=2000 AND yearID<=2016 AND
+teamID = 'SEA';
+
+SELECT teamID, SUM(salary), RANK() OVER(ORDER BY SUM(salary) DESC) AS Rank1 FROM Salaries
+WHERE yearID >=2000 AND yearID<=2016
+GROUP BY teamID
+ORDER BY SUM(salary) DESC;
+
+SELECT yearID, teamID, ROUND(AVG(salary),2) AS "Avg_Salary"
+FROM Salaries
+WHERE yearID>=2000 AND yearID<=2016
+GROUP BY yearID, teamID;
+
+SELECT * from Teams LIMIT 100;
+
+SELECT teamID, SUM(W) AS "Total_Wins" FROM Teams
+WHERE yearID>=2000 AND yearID<=2016
+GROUP BY teamID;
+
+WITH TableRankings AS
+(
+SELECT 	Salaries.yearID AS "Year", 
+		Salaries.teamID AS "Team", 
+        ROUND(AVG(Salaries.salary),2) AS "Avg_Salary",
+		SUM(Teams.W) AS "Total_Wins",
+        RANK() OVER(PARTITION BY Salaries.yearID ORDER BY AVG(Salaries.salary) DESC) AS "Rank"
+FROM Salaries
+INNER JOIN Teams
+ON Salaries.teamID=Teams.teamID
+WHERE Salaries.yearID>=2000 AND Salaries.yearID<=2016
+GROUP BY Salaries.yearID, Salaries.teamID
+ORDER BY "Rank"),
+TableRankings2 AS
+(
+SELECT 	Year,
+		Team ,
+        Avg_Salary,
+        Total_Wins,
+        Rank
+FROM TableRankings
+WHERE Rank <=15)
+SELECT Team, COUNT(*) AS "Count"
+FROM TableRankings2
+GROUP BY Team
+ORDER BY COUNT(*) DESC;
