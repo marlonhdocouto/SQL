@@ -1,0 +1,124 @@
+
+/*Another project in which we were tested on ability to use CTEs and Window functions*/
+
+
+
+WITH t1 AS
+(SELECT 	Profile,
+		RateDate,
+		MAX(RateDate) OVER(PARTITION BY Profile) AS MaxDate,
+        DATEDIFF(MAX(RateDate) OVER(PARTITION BY Profile),RateDate) AS Diff
+FROM	Reviews),
+t2 AS
+(
+SELECT 	Profile,
+		RateDate, 
+        MaxDate, 
+		MIN(t1.Diff) OVER(PARTITION BY Profile) AS Diff
+FROM   t1
+WHERE MaxDate > RateDate AND
+	  MaxDate != RateDate)
+SELECT 	Profile,
+		Diff
+FROM   t2
+GROUP BY Diff;
+
+SELECT 		Profile,
+			RateDate,
+			MAX(RateDate) OVER(PARTITION BY Profile) AS MaxDate,
+			DATEDIFF(MAX(RateDate) OVER(PARTITION BY Profile),RateDate) AS Diff
+FROM		Reviews
+ORDER BY 	Profile, 
+			RateDate DESC;
+            
+SELECT * FROM airports;
+SELECT * FROM ontime;
+
+            
+WITH T1 AS
+(
+SELECT		airports.Name,
+			MONTHNAME(DATE(CONCAT(Year,'-',Month,'-',DayofMonth))) AS Month_Name,
+            AVG(DepDelay) AS "Avg_Delay",
+			CASE
+            WHEN COUNT(*) <1000 THEN 0
+            WHEN COUNT(*) >=1000 THEN 1
+            END AS "Count1k"
+FROM 		ontime
+INNER JOIN	airports
+ON			ontime.Origin = airports.IATA 
+WHERE 		ontime.Cancelled = 0 AND
+			ontime.Diverted = 0
+GROUP BY	Month_Name,
+			airports.Name
+#ORDER BY    airports.Name,
+#			Ranking DESC
+), t2 AS
+(
+SELECT  	t1.Name,
+			t1.Month_Name,
+            t1.Avg_Delay,
+            subq1.SumEquals,
+			RANK() OVER(PARTITION BY t1.Month_Name ORDER BY t1.Avg_Delay DESC) AS Ranking
+FROM 		t1
+INNER JOIN  (
+	SELECT 		Name,
+				SUM(Count1k) AS "SumEquals"
+	FROM 		t1
+	GROUP BY	Name
+	HAVING		SumEquals =12
+) AS subq1
+ON			t1.Name = subq1.Name
+)
+SELECT		t2.Month_Name,
+			t2.Name,
+            t2.Ranking
+FROM 		t2
+WHERE		t2.Ranking = 1 OR
+			t2.Ranking = 2
+ORDER BY	(CASE
+			WHEN t2.Month_Name = 'January' THEN 1
+            WHEN t2.Month_Name = 'February' THEN 2
+            WHEN t2.Month_Name = 'March' THEN 3
+            WHEN t2.Month_Name = 'April' THEN 4
+            WHEN t2.Month_Name = 'May' THEN 5
+            WHEN t2.Month_Name = 'June' THEN 6
+            WHEN t2.Month_Name = 'July' THEN 7
+            WHEN t2.Month_Name = 'August' THEN 8
+            WHEN t2.Month_Name = 'September' THEN 9
+            WHEN t2.Month_Name = 'October' THEN 10
+            WHEN t2.Month_Name = 'November' THEN 11
+            WHEN t2.Month_Name = 'December' THEN 12
+            END),
+            t2.Ranking ;
+            
+use yelp;
+SELECT * FROM business;
+SELECT * FROM covid;
+
+WITH t1 AS
+(
+SELECT 		stars,
+			COUNT(*) AS A,
+			COUNT(*)/SUM(COUNT(*)) OVER() AS B
+FROM		business
+GROUP BY 	stars),
+t2 AS
+(
+SELECT 		stars,	
+			COUNT(*) AS C,
+			COUNT(*)/SUM(COUNT(*)) OVER() AS D
+FROM 		business
+INNER JOIN covid
+ON			business.business_id=covid.business_id
+WHERE		covid.grubhub_enabled = 'TRUE'
+GROUP BY 	stars
+)
+SELECT 		t1.stars,
+			t1.A,
+			t1.B,
+			t2.C,
+			t2.D
+FROM    	t1
+INNER JOIN 	t2
+ON 			t1.stars=t2.stars;
